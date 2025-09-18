@@ -40,13 +40,18 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
     }
     
     peerConnection.ontrack = (event) => {
+      console.log('Received remote track:', event.streams[0])
       if (remoteVideoRef.current && event.streams[0]) {
         remoteVideoRef.current.srcObject = event.streams[0]
+        console.log('Remote video element src set:', remoteVideoRef.current.srcObject)
         setIsConnected(true)
+      } else {
+        console.warn('Remote video ref is null or no stream')
       }
     }
     
     peerConnection.onconnectionstatechange = () => {
+      console.log('Peer connection state changed to:', peerConnection.connectionState)
       if (peerConnection.connectionState === 'connected') {
         setIsConnected(true)
       } else if (peerConnection.connectionState === 'disconnected') {
@@ -69,6 +74,9 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
       localStreamRef.current = stream
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = stream
+        console.log('Local video element src set:', localVideoRef.current.srcObject)
+      } else {
+        console.warn('Local video ref is null')
       }
       
       setIsLocalStreamReady(true)
@@ -183,26 +191,35 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
     }
 
     const handleOffer = async (data: { offer: RTCSessionDescriptionInit, from: string }) => {
+      console.log('Received offer from:', data.from)
       if (!peerConnectionRef.current) return
       
       remotePeerIdRef.current = data.from
       await peerConnectionRef.current.setRemoteDescription(data.offer)
+      console.log('Set remote description (offer)')
+      
       const answer = await peerConnectionRef.current.createAnswer()
       await peerConnectionRef.current.setLocalDescription(answer)
+      console.log('Created and set local description (answer)')
       
       socket.emit('answer', { answer, target: data.from })
+      console.log('Sent answer to:', data.from)
     }
 
     const handleAnswer = async (data: { answer: RTCSessionDescriptionInit }) => {
+      console.log('Received answer')
       if (!peerConnectionRef.current) return
       
       await peerConnectionRef.current.setRemoteDescription(data.answer)
+      console.log('Set remote description (answer)')
     }
 
     const handleIceCandidate = async (data: { candidate: RTCIceCandidateInit }) => {
+      console.log('Received ICE candidate')
       if (!peerConnectionRef.current) return
       
       await peerConnectionRef.current.addIceCandidate(data.candidate)
+      console.log('Added ICE candidate')
     }
 
     const createOfferForPeer = async (peerId: string) => {
@@ -216,8 +233,10 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
       remotePeerIdRef.current = peerId
       const offer = await peerConnectionRef.current.createOffer()
       await peerConnectionRef.current.setLocalDescription(offer)
+      console.log('Created and set local description (offer)')
       
       socket.emit('offer', { offer, target: peerId })
+      console.log('Sent offer to:', peerId)
       pendingOfferRef.current = null
     }
 

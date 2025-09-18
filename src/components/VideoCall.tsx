@@ -18,6 +18,7 @@ export default function VideoCall({ roomId }: VideoCallProps) {
     isMuted,
     isVideoOff,
     isScreenSharing,
+    isLocalStreamReady,
     toggleMute,
     toggleVideo,
     shareScreen,
@@ -75,7 +76,13 @@ export default function VideoCall({ roomId }: VideoCallProps) {
                 </div>
               </div>
               <h2 className="text-2xl font-semibold mb-2">Room: {roomId}</h2>
-              <p className="text-gray-400">Waiting for someone to join...</p>
+              <p className="text-gray-400">
+                {!isLocalStreamReady ? 'Initializing camera...' : 'Waiting for someone to join...'}
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Socket: {socket ? 'Connected' : 'Disconnected'} | 
+                Camera: {isLocalStreamReady ? 'Ready' : 'Loading'}
+              </p>
             </div>
           </div>
         )}
