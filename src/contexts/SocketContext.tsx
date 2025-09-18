@@ -41,16 +41,21 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       transports: isVercelBackend ? ['polling'] : ['websocket', 'polling'],
       upgrade: !isVercelBackend,
       rememberUpgrade: !isVercelBackend,
-      timeout: 30000,
-      forceNew: true,
+      timeout: 60000,
+      forceNew: false,
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 2000,
+      reconnectionAttempts: 3,
+      reconnectionDelay: 3000,
       reconnectionDelayMax: 10000,
       randomizationFactor: 0.5,
       withCredentials: false,
-      closeOnBeforeunload: false
+      closeOnBeforeunload: false,
+      // Polling-specific options for serverless
+      ...(isVercelBackend && {
+        pollingTimeout: 30000,
+        forceBase64: false
+      })
     })
 
     const socket = socketRef.current
@@ -73,7 +78,11 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       // Handle different disconnect reasons
       if (reason === 'io server disconnect') {
         console.log('Server disconnected, attempting to reconnect...')
-        socket.connect()
+        setTimeout(() => socket.connect(), 1000)
+      } else if (reason === 'transport error') {
+        console.error('❌ Transport error - likely backend issue or timeout')
+        console.log('Retrying connection in 5 seconds...')
+        setTimeout(() => socket.connect(), 5000)
       }
     })
 
