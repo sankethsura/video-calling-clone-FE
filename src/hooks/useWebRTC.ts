@@ -18,6 +18,7 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
+  const remotePeerIdRef = useRef<string | null>(null)
   
   const [isConnected, setIsConnected] = useState(false)
   const [isMuted, setIsMuted] = useState(false)
@@ -28,10 +29,10 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
     const peerConnection = new RTCPeerConnection(ICE_SERVERS)
     
     peerConnection.onicecandidate = (event) => {
-      if (event.candidate && socket) {
+      if (event.candidate && socket && remotePeerIdRef.current) {
         socket.emit('ice-candidate', {
           candidate: event.candidate,
-          roomId
+          target: remotePeerIdRef.current
         })
       }
     }
@@ -156,7 +157,7 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
     }
     
     if (socket) {
-      socket.emit('leave-room', roomId)
+      socket.emit('leave')
     }
     
     setIsConnected(false)
@@ -175,14 +176,15 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
       }
     }
 
-    const handleOffer = async (data: { offer: RTCSessionDescriptionInit }) => {
+    const handleOffer = async (data: { offer: RTCSessionDescriptionInit, from: string }) => {
       if (!peerConnectionRef.current) return
       
+      remotePeerIdRef.current = data.from
       await peerConnectionRef.current.setRemoteDescription(data.offer)
       const answer = await peerConnectionRef.current.createAnswer()
       await peerConnectionRef.current.setLocalDescription(answer)
       
-      socket.emit('answer', { answer, roomId })
+      socket.emit('answer', { answer, target: data.from })
     }
 
     const handleAnswer = async (data: { answer: RTCSessionDescriptionInit }) => {
@@ -197,20 +199,21 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
       await peerConnectionRef.current.addIceCandidate(data.candidate)
     }
 
-    const handleUserJoined = async () => {
+    const handlePeerJoined = async (data: { peerId: string }) => {
       if (!peerConnectionRef.current) return
       
+      remotePeerIdRef.current = data.peerId
       const offer = await peerConnectionRef.current.createOffer()
       await peerConnectionRef.current.setLocalDescription(offer)
       
-      socket.emit('offer', { offer, roomId })
+      socket.emit('offer', { offer, target: data.peerId })
     }
 
     socket.on('offer', handleOffer)
     socket.on('answer', handleAnswer)
     socket.on('ice-candidate', handleIceCandidate)
-    socket.on('user-joined', handleUserJoined)
-    socket.on('user-left', () => setIsConnected(false))
+    socket.on('peer-joined', handlePeerJoined)
+    socket.on('peer-left', () => setIsConnected(false))
 
     initializeCall()
 
@@ -218,8 +221,8 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
       socket.off('offer', handleOffer)
       socket.off('answer', handleAnswer)
       socket.off('ice-candidate', handleIceCandidate)
-      socket.off('user-joined', handleUserJoined)
-      socket.off('user-left')
+      socket.off('peer-joined', handlePeerJoined)
+      socket.off('peer-left')
       
       leaveCall()
     }
