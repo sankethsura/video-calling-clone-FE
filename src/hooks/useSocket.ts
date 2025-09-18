@@ -34,7 +34,6 @@ export const useSocket = (roomId: string) => {
       reconnectionAttempts: 10,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
-      maxReconnectionAttempts: 10,
       randomizationFactor: 0.5,
       withCredentials: false
     })
