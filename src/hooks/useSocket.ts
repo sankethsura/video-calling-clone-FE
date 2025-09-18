@@ -25,8 +25,18 @@ export const useSocket = (roomId: string) => {
     
     socketRef.current = io(socketUrl, {
       transports: ['polling', 'websocket'],
+      upgrade: true,
+      rememberUpgrade: false,
+      timeout: 20000,
       forceNew: false,
-      autoConnect: true
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: 10,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      maxReconnectionAttempts: 10,
+      randomizationFactor: 0.5,
+      withCredentials: false
     })
 
     const socket = socketRef.current
