@@ -324,6 +324,22 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
     }
   }, [isLocalStreamReady, hasPeerJoined, socket])
 
+  // Re-assign video streams when isConnected changes (layout switch)
+  useEffect(() => {
+    if (isConnected) {
+      console.log('Re-assigning video streams after connection')
+      // Re-assign local video
+      if (localVideoRef.current && localStreamRef.current) {
+        localVideoRef.current.srcObject = localStreamRef.current
+        console.log('Re-assigned local video stream')
+      }
+      // Re-assign remote video if it exists
+      if (remoteVideoRef.current && remoteVideoRef.current.srcObject) {
+        console.log('Remote video already assigned')
+      }
+    }
+  }, [isConnected])
+
   return {
     localVideoRef,
     remoteVideoRef,
