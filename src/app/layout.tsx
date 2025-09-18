@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import { SocketProvider } from '@/contexts/SocketContext'
 
 export const metadata: Metadata = {
   title: 'Video Call App',
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="min-h-screen bg-gray-100">
-        {children}
+        <SocketProvider>
+          {children}
+        </SocketProvider>
       </body>
     </html>
   )

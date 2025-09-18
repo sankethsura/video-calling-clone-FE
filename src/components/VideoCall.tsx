@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useSocket } from '@/hooks/useSocket'
+import { useSocketContext } from '@/contexts/SocketContext'
 import { useWebRTC } from '@/hooks/useWebRTC'
 import { useEffect } from 'react'
 
@@ -11,7 +11,7 @@ interface VideoCallProps {
 
 export default function VideoCall({ roomId }: VideoCallProps) {
   const router = useRouter()
-  const socket = useSocket(roomId)
+  const { socket, joinRoom, leaveRoom } = useSocketContext()
   const {
     localVideoRef,
     remoteVideoRef,
@@ -28,8 +28,15 @@ export default function VideoCall({ roomId }: VideoCallProps) {
 
   const handleLeave = () => {
     leaveCall()
+    leaveRoom()
     router.push('/')
   }
+
+  useEffect(() => {
+    if (socket) {
+      joinRoom(roomId)
+    }
+  }, [socket, roomId, joinRoom])
 
   // Debug: Log when isConnected changes
   useEffect(() => {

@@ -186,7 +186,10 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
   }, [socket, roomId])
 
   useEffect(() => {
-    if (!socket) return
+    if (!socket || !socket.connected) {
+      console.log('Socket not available or not connected, waiting...')
+      return
+    }
 
     const initializeCall = async () => {
       try {
