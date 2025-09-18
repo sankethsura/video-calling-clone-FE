@@ -18,6 +18,7 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
   const remoteVideoRef = useRef<HTMLVideoElement>(null)
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null)
   const localStreamRef = useRef<MediaStream | null>(null)
+  const remoteStreamRef = useRef<MediaStream | null>(null)
   const remotePeerIdRef = useRef<string | null>(null)
   const pendingOfferRef = useRef<string | null>(null)
   
@@ -42,16 +43,16 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
     
     peerConnection.ontrack = (event) => {
       console.log('Received remote track:', event.streams[0])
-      console.log('Local video still playing?', localVideoRef.current?.srcObject ? 'Yes' : 'No')
-      if (remoteVideoRef.current && event.streams[0]) {
-        remoteVideoRef.current.srcObject = event.streams[0]
-        console.log('Remote video element src set:', remoteVideoRef.current.srcObject)
+      if (event.streams[0]) {
+        remoteStreamRef.current = event.streams[0]
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = event.streams[0]
+          console.log('Remote video element src set:', remoteVideoRef.current.srcObject)
+        }
         console.log('Setting isConnected to true')
         setIsConnected(true)
       } else {
-        console.warn('Remote video ref is null or no stream')
-        console.warn('remoteVideoRef.current:', remoteVideoRef.current)
-        console.warn('event.streams[0]:', event.streams[0])
+        console.warn('No remote stream received')
       }
     }
     
@@ -333,9 +334,14 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
         localVideoRef.current.srcObject = localStreamRef.current
         console.log('Re-assigned local video stream')
       }
-      // Re-assign remote video if it exists
-      if (remoteVideoRef.current && remoteVideoRef.current.srcObject) {
-        console.log('Remote video already assigned')
+      // Re-assign remote video
+      if (remoteVideoRef.current && remoteStreamRef.current) {
+        remoteVideoRef.current.srcObject = remoteStreamRef.current
+        console.log('Re-assigned remote video stream')
+      } else if (remoteVideoRef.current && !remoteStreamRef.current) {
+        console.warn('Remote video ref exists but no remote stream stored')
+      } else if (!remoteVideoRef.current) {
+        console.warn('Remote video ref is null')
       }
     }
   }, [isConnected])
