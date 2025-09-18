@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useSocket } from '@/hooks/useSocket'
 import { useWebRTC } from '@/hooks/useWebRTC'
+import { useEffect } from 'react'
 
 interface VideoCallProps {
   roomId: string
@@ -29,6 +30,11 @@ export default function VideoCall({ roomId }: VideoCallProps) {
     leaveCall()
     router.push('/')
   }
+
+  // Debug: Log when isConnected changes
+  useEffect(() => {
+    console.log('VideoCall: isConnected changed to:', isConnected)
+  }, [isConnected])
 
   return (
     <div className="h-screen flex flex-col bg-gray-900 text-white">
@@ -81,7 +87,8 @@ export default function VideoCall({ roomId }: VideoCallProps) {
               </p>
               <p className="text-sm text-gray-500 mt-1">
                 Socket: {socket ? 'Connected' : 'Disconnected'} | 
-                Camera: {isLocalStreamReady ? 'Ready' : 'Loading'}
+                Camera: {isLocalStreamReady ? 'Ready' : 'Loading'} |
+                Peer: {isConnected ? 'Connected' : 'Waiting'}
               </p>
             </div>
           </div>

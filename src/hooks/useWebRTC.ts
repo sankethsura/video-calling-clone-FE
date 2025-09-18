@@ -26,6 +26,7 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
   const [isVideoOff, setIsVideoOff] = useState(false)
   const [isScreenSharing, setIsScreenSharing] = useState(false)
   const [isLocalStreamReady, setIsLocalStreamReady] = useState(false)
+  const [hasPeerJoined, setHasPeerJoined] = useState(false)
 
   const createPeerConnection = useCallback(() => {
     const peerConnection = new RTCPeerConnection(ICE_SERVERS)
@@ -41,12 +42,16 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
     
     peerConnection.ontrack = (event) => {
       console.log('Received remote track:', event.streams[0])
+      console.log('Local video still playing?', localVideoRef.current?.srcObject ? 'Yes' : 'No')
       if (remoteVideoRef.current && event.streams[0]) {
         remoteVideoRef.current.srcObject = event.streams[0]
         console.log('Remote video element src set:', remoteVideoRef.current.srcObject)
+        console.log('Setting isConnected to true')
         setIsConnected(true)
       } else {
         console.warn('Remote video ref is null or no stream')
+        console.warn('remoteVideoRef.current:', remoteVideoRef.current)
+        console.warn('event.streams[0]:', event.streams[0])
       }
     }
     
@@ -90,7 +95,9 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
 
   const addStreamToPeerConnection = useCallback((stream: MediaStream) => {
     if (peerConnectionRef.current) {
+      console.log('Adding stream to peer connection with tracks:', stream.getTracks().length)
       stream.getTracks().forEach(track => {
+        console.log('Adding track:', track.kind, 'enabled:', track.enabled)
         peerConnectionRef.current?.addTrack(track, stream)
       })
     }
@@ -241,7 +248,22 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
     }
 
     const handlePeerJoined = async (data: { peerId: string }) => {
+      console.log('Peer joined event received:', data.peerId)
+      setHasPeerJoined(true)
+      remotePeerIdRef.current = data.peerId
       await createOfferForPeer(data.peerId)
+    }
+
+    const handleRoomCreated = (data: any) => {
+      console.log('Room created:', data)
+    }
+
+    const handleRoomJoined = (data: any) => {
+      console.log('Room joined:', data)
+    }
+
+    const handleRoomFull = (data: any) => {
+      console.log('Room full:', data)
     }
 
     socket.on('offer', handleOffer)
@@ -249,9 +271,9 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
     socket.on('ice-candidate', handleIceCandidate)
     socket.on('peer-joined', handlePeerJoined)
     socket.on('peer-left', () => setIsConnected(false))
-    socket.on('room-created', (data) => console.log('Room created:', data))
-    socket.on('room-joined', (data) => console.log('Room joined:', data))
-    socket.on('room-full', (data) => console.log('Room full:', data))
+    socket.on('room-created', handleRoomCreated)
+    socket.on('room-joined', handleRoomJoined)
+    socket.on('room-full', handleRoomFull)
 
     initializeCall()
 
@@ -261,32 +283,46 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
       socket.off('ice-candidate', handleIceCandidate)
       socket.off('peer-joined', handlePeerJoined)
       socket.off('peer-left')
-      socket.off('room-created')
-      socket.off('room-joined')
-      socket.off('room-full')
+      socket.off('room-created', handleRoomCreated)
+      socket.off('room-joined', handleRoomJoined)
+      socket.off('room-full', handleRoomFull)
       
       leaveCall()
     }
   }, [socket, roomId, createPeerConnection, startLocalStream, addStreamToPeerConnection, leaveCall])
 
-  // Handle pending offers when local stream becomes ready
+  // Handle creating offer when local stream becomes ready and peer has joined
   useEffect(() => {
-    if (isLocalStreamReady && pendingOfferRef.current && socket) {
-      console.log('Local stream ready, creating pending offer for:', pendingOfferRef.current)
-      const createOfferForPeer = async (peerId: string) => {
-        if (!peerConnectionRef.current) return
+    console.log('Offer creation check:', { 
+      isLocalStreamReady, 
+      hasPeerJoined, 
+      remotePeerId: remotePeerIdRef.current,
+      hasSocket: !!socket,
+      hasPeerConnection: !!peerConnectionRef.current
+    })
+    
+    if (isLocalStreamReady && hasPeerJoined && remotePeerIdRef.current && socket && peerConnectionRef.current) {
+      console.log('Creating offer for peer:', remotePeerIdRef.current)
+      
+      const createOfferForPeer = async () => {
+        if (!peerConnectionRef.current || !remotePeerIdRef.current) return
         
-        remotePeerIdRef.current = peerId
-        const offer = await peerConnectionRef.current.createOffer()
-        await peerConnectionRef.current.setLocalDescription(offer)
-        
-        socket.emit('offer', { offer, target: peerId })
-        pendingOfferRef.current = null
+        try {
+          const offer = await peerConnectionRef.current.createOffer()
+          await peerConnectionRef.current.setLocalDescription(offer)
+          console.log('Created and set local description (offer)')
+          
+          socket.emit('offer', { offer, target: remotePeerIdRef.current })
+          console.log('Sent offer to:', remotePeerIdRef.current)
+          setHasPeerJoined(false) // Reset to avoid duplicate offers
+        } catch (error) {
+          console.error('Error creating offer:', error)
+        }
       }
       
-      createOfferForPeer(pendingOfferRef.current)
+      createOfferForPeer()
     }
-  }, [isLocalStreamReady, socket])
+  }, [isLocalStreamReady, hasPeerJoined, socket])
 
   return {
     localVideoRef,

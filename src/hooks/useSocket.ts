@@ -34,6 +34,7 @@ export const useSocket = (roomId: string) => {
     socket.on('connect', () => {
       console.log('Socket connected with ID:', socket.id)
       setIsConnected(true)
+      console.log('Emitting join-room event for room:', roomId)
       socket.emit('join-room', roomId)
     })
 
