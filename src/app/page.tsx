@@ -18,7 +18,7 @@ export default function Home() {
   console.log(process.env.NEXT_PUBLIC_SOCKET_URL)
   const fetchActiveRooms = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL || "https://video-calling-clone-be-ef7y.vercel.app" || 'http://localhost:3001'}/rooms`)
+      const response = await fetch(`${process.env.NEXT_PUBLIC_SOCKET_URL || "https://video-calling-clone-be-ef7y.vercel.app" || 'http://localhost:8000'}/rooms`)
       if (response.ok) {
         const rooms = await response.json()
         setActiveRooms(rooms)
