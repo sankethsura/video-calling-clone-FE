@@ -64,6 +64,21 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     socket.on('connect_error', (error) => {
       console.error('Global socket connection error:', error)
       setIsConnected(false)
+      
+      // If CORS error, suggest backend update
+      if (error.message.includes('400') || error.message.includes('CORS')) {
+        console.error('❌ CORS Error: Backend needs to allow frontend domain in CORS settings')
+        console.error('Frontend URL:', window.location.origin)
+        console.error('Backend URL:', socketUrl)
+      }
+    })
+
+    socket.on('reconnect_failed', () => {
+      console.error('❌ Socket reconnection failed completely')
+    })
+
+    socket.on('reconnect_error', (error) => {
+      console.error('Socket reconnection error:', error)
     })
 
     return () => {
