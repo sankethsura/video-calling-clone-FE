@@ -5,6 +5,9 @@ import { SocketProvider } from '@/contexts/SocketContext'
 export const metadata: Metadata = {
   title: 'Video Call App',
   description: '1:1 Video calling app with WebRTC',
+  icons: {
+    icon: '/favicon.ico',
+  },
 }
 
 export default function RootLayout({

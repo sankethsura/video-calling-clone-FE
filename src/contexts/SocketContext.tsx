@@ -34,10 +34,13 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000'
     console.log('Creating global socket connection to:', socketUrl)
     
+    // Check if we're connecting to Vercel backend (which doesn't support WebSocket)
+    const isVercelBackend = socketUrl.includes('vercel.app')
+    
     socketRef.current = io(socketUrl, {
-      transports: ['websocket', 'polling'],
-      upgrade: true,
-      rememberUpgrade: true,
+      transports: isVercelBackend ? ['polling'] : ['websocket', 'polling'],
+      upgrade: !isVercelBackend,
+      rememberUpgrade: !isVercelBackend,
       timeout: 30000,
       forceNew: true,
       autoConnect: true,
