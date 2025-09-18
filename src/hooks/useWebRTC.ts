@@ -214,6 +214,9 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
     socket.on('ice-candidate', handleIceCandidate)
     socket.on('peer-joined', handlePeerJoined)
     socket.on('peer-left', () => setIsConnected(false))
+    socket.on('room-created', (data) => console.log('Room created:', data))
+    socket.on('room-joined', (data) => console.log('Room joined:', data))
+    socket.on('room-full', (data) => console.log('Room full:', data))
 
     initializeCall()
 
@@ -223,6 +226,9 @@ export const useWebRTC = ({ socket, roomId }: UseWebRTCProps) => {
       socket.off('ice-candidate', handleIceCandidate)
       socket.off('peer-joined', handlePeerJoined)
       socket.off('peer-left')
+      socket.off('room-created')
+      socket.off('room-joined')
+      socket.off('room-full')
       
       leaveCall()
     }

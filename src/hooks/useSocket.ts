@@ -7,13 +7,27 @@ export const useSocket = (roomId: string) => {
   useEffect(() => {
     if (!roomId) return
 
-    socketRef.current = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:3001', {
-      transports: ['websocket']
+    const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:8000'
+    console.log('Connecting to socket:', socketUrl)
+    
+    socketRef.current = io(socketUrl, {
+      transports: ['polling', 'websocket']
     })
 
     const socket = socketRef.current
 
-    socket.emit('join-room', roomId)
+    socket.on('connect', () => {
+      console.log('Socket connected:', socket.id)
+      socket.emit('join-room', roomId)
+    })
+
+    socket.on('disconnect', () => {
+      console.log('Socket disconnected')
+    })
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error)
+    })
 
     return () => {
       if (socket) {
