@@ -35,18 +35,19 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     console.log('Creating global socket connection to:', socketUrl)
     
     socketRef.current = io(socketUrl, {
-      transports: ['polling', 'websocket'],
+      transports: ['websocket', 'polling'],
       upgrade: true,
-      rememberUpgrade: false,
-      timeout: 20000,
-      forceNew: false,
+      rememberUpgrade: true,
+      timeout: 30000,
+      forceNew: true,
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 10,
-      reconnectionDelay: 1000,
-      reconnectionDelayMax: 5000,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
       randomizationFactor: 0.5,
-      withCredentials: false
+      withCredentials: false,
+      closeOnBeforeunload: false
     })
 
     const socket = socketRef.current
@@ -54,11 +55,28 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     socket.on('connect', () => {
       console.log('Global socket connected with ID:', socket.id)
       setIsConnected(true)
+      
+      // Rejoin room if we were in one before disconnection
+      if (currentRoom) {
+        console.log('Rejoining room after reconnection:', currentRoom)
+        socket.emit('join-room', currentRoom)
+      }
     })
 
-    socket.on('disconnect', () => {
-      console.log('Global socket disconnected')
+    socket.on('disconnect', (reason) => {
+      console.log('Global socket disconnected, reason:', reason)
       setIsConnected(false)
+      
+      // Handle different disconnect reasons
+      if (reason === 'io server disconnect') {
+        console.log('Server disconnected, attempting to reconnect...')
+        socket.connect()
+      }
+    })
+
+    socket.on('reconnect', (attemptNumber) => {
+      console.log('Socket reconnected after', attemptNumber, 'attempts')
+      setIsConnected(true)
     })
 
     socket.on('connect_error', (error) => {
